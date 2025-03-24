@@ -9,7 +9,6 @@ import validators
 # Configuration
 BACKEND_URL = "https://nfc-business-card-software.onrender.com"
 
-# NEW: Added URL validation function
 def validate_urls(*urls):
     """Validate URLs (skip empty strings)."""
     for url in urls:
@@ -49,7 +48,7 @@ def show_success(card_data):
         """)
         
         if st.button("📋 Copy Card URL"):
-            st.session_state.card_url = f"{BACKEND_URL}{card_data['view_url']}
+            st.session_state.card_url = f"{BACKEND_URL}{card_data['view_url']}"  # FIXED: Added missing quote
             st.experimental_rerun()
             
         if 'card_url' in st.session_state:
@@ -103,7 +102,6 @@ def main():
             elif not validate_urls(website, linkedin, twitter):
                 st.error("Invalid URL format (include https://)")
             else:
-                # NEW: Complete form submission handling
                 card_data = {
                     "name": name,
                     "title": title,
