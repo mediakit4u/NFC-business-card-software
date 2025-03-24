@@ -9,6 +9,26 @@ import validators
 # Configuration
 BACKEND_URL = "https://nfc-business-card-software.onrender.com" # your render url
 
+def safe_api_call():
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/",
+            timeout=10  # Increased timeout for Render's cold starts
+        )
+        response.raise_for_status()  # Raises HTTPError for bad responses
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"🚨 Backend connection failed: {str(e)}")
+        return None
+
+
+# Test connection when app loads
+if st.session_state.get('init', True):
+    st.session_state.init = False
+    api_status = safe_api_call()
+    if api_status:
+        st.success(f"✅ Backend connected: {api_status}")
+
 
 def test_connection():
     try:
