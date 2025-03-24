@@ -119,6 +119,17 @@ async def view_card(card_id: str, request: Request):
         {"request": request, "card": dict(card)}
     )
 
+@app.get("/", include_in_schema=False)
+def health_check():
+    return {
+        "status": "Running", 
+        "docs": "/docs",
+        "api_routes": [
+            "/api/cards [POST]",
+            "/cards/{card_id} [GET]"
+        ]
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
