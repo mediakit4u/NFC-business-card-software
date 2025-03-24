@@ -7,7 +7,7 @@ import os
 import validators
 
 # Configuration
-BACKEND_URL = os.getenv("https://nfc-business-card-software.onrender.com", "http://localhost:8000")
+BACKEND_URL = "https://nfc-business-card-software.onrender.com"
 
 response = requests.post(
     f"{BACKEND_URL}/api/cards",
