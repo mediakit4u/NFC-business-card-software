@@ -48,7 +48,7 @@ def show_success(card_data):
         """)
         
         if st.button("📋 Copy Card URL"):
-            st.session_state.card_url = f"{BACKEND_URL}{card_data['view_url']}"  # FIXED: Added missing quote
+            st.session_state.card_url = f"{BACKEND_URL}{card_data['view_url']}"
             st.experimental_rerun()
             
         if 'card_url' in st.session_state:
@@ -60,7 +60,7 @@ def show_success(card_data):
                 width=200)
     
     st.markdown("### Next Steps:")
-    st.markdown("""
+    st.markdown("""  # FIXED: Added missing quote
     1. **Print the QR code** on your physical business cards
     2. **For NFC cards**: Program them with your card URL
     3. **Share the link** digitally in emails or messages
