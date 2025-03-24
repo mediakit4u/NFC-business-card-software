@@ -10,6 +10,15 @@ import qrcode
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Temporary for testing
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Initialize directories SAFELY
 def init_directories():
     BASE_DIR = Path(__file__).parent
