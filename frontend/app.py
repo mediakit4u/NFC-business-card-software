@@ -76,7 +76,7 @@ def main():
         twitter = st.text_input("Twitter URL")
         profile_img = st.file_uploader("Profile Photo", type=["jpg", "png", "jpeg"])
     
-    submitted = st.form_submit_button("Create Digital Card")
+    submitted = st.form_submit_button("Save Card")
     
     if submitted:
         if not all([name, title, company, phone, email]):
