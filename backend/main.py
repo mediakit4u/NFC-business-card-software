@@ -3,7 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import sqlite3
-print("SQLite version:", sqlite3.sqlite_version)
 import os
 import uuid
 from pathlib import Path
