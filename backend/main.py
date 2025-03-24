@@ -16,8 +16,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://nfc-business-card-software-mediakit.streamlit.app",  # Your frontend
+        "https://*.streamlit.app",  # Covers all Streamlit deployments
         "http://localhost:8501"  # For local testing
+        
     ],
+     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
