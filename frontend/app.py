@@ -79,59 +79,9 @@ def main():
     submitted = st.form_submit_button("Create Digital Card")
     
     if submitted:
-        # Input validation (keep your existing checks)
         if not all([name, title, company, phone, email]):
             st.error("Please fill all required fields (*)")
-        elif not validate_urls(website, linkedin, twitter):
-            st.error("Please enter valid URLs (start with http:// or https://)")
-        else:
-            with st.spinner("Creating your digital card..."):
-                try:
-                    # Prepare form data
-                    form_data = {
-                        "name": name,
-                        "title": title,
-                        "company": company,
-                        "phone": phone,
-                        "email": email,
-                        "website": website or "",
-                        "linkedin": linkedin or "",
-                        "twitter": twitter or ""
-                    }
-                    
-                    # Prepare files if image uploaded
-                    files = {}
-                    if profile_img:
-                        files = {"profile_image": (profile_img.name, profile_img.getvalue())}
-                    
-                    # API call with timeout
-                    response = requests.post(
-                        f"{BACKEND_URL}/api/cards",
-                        data=form_data,
-                        files=files,
-                        timeout=15  # Important for Render
-                    )
-                    
-                    # Handle response
-                    if response.status_code == 200:
-                        card_data = response.json()
-                        st.success("Card created successfully!")
-                        
-                        # Show QR code if returned
-                        if "qr_url" in card_data:
-                            st.image(card_data["qr_url"], caption="Your NFC QR Code")
-                        
-                        # Optional: Clear form on success
-                        st.session_state.form_cleared = True  
-                        
-                    else:
-                        st.error(f"Backend error: {response.text}")
-                        
-                except requests.exceptions.Timeout:
-                    st.error("Request timed out. Please try again.")
-                except Exception as e:
-                    st.error(f"Unexpected error: {str(e)}")
-                    
+        elif not validate_urls(website, linkedin
 def show_success(card_data):
     st.success("🎉 Your digital business card was created successfully!")
     
