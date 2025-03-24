@@ -47,7 +47,6 @@ response = requests.post(
     files={...},  # Your uploaded file
     timeout=10
 )
-
 def main():
     st.set_page_config(
         page_title="NFC Business Card Creator",
@@ -58,30 +57,35 @@ def main():
     st.title("📇 NFC Digital Business Card Creator")
     st.markdown("Create your professional digital business card with QR code and NFC capability")
 
-    with st.form("card_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Personal Information")
-        name = st.text_input("Full Name*")
-        title = st.text_input("Job Title*")
-        company = st.text_input("Company*")
-        phone = st.text_input("Phone*")
-        email = st.text_input("Email*")
+    with st.form("card_form"):  # <-- This line was missing proper indentation
+        col1, col2 = st.columns(2)
         
-    with col2:
-        st.subheader("Additional Details")
-        website = st.text_input("Website")
-        linkedin = st.text_input("LinkedIn URL")
-        twitter = st.text_input("Twitter URL")
-        profile_img = st.file_uploader("Profile Photo", type=["jpg", "png", "jpeg"])
-    
-    submitted = st.form_submit_button("Save Card")
-    
-    if submitted:
-        if not all([name, title, company, phone, email]):
-            st.error("Please fill all required fields (*)")
-        elif not validate_urls(website, linkedin
+        with col1:
+            st.subheader("Personal Information")
+            name = st.text_input("Full Name*")
+            title = st.text_input("Job Title*")
+            company = st.text_input("Company*")
+            phone = st.text_input("Phone*")
+            email = st.text_input("Email*")
+            
+        with col2:
+            st.subheader("Additional Details")
+            website = st.text_input("Website")
+            linkedin = st.text_input("LinkedIn URL")
+            twitter = st.text_input("Twitter URL")
+            profile_img = st.file_uploader("Profile Photo", type=["jpg", "png", "jpeg"])
+        
+        submitted = st.form_submit_button("Save Card")
+        
+        if submitted:
+            if not all([name, title, company, phone, email]):
+                st.error("Please fill all required fields (*)")
+            elif not validate_urls(website, linkedin, twitter):  # <-- You'll need to define this function
+                st.error("Invalid URL format (include https://)")
+            else:
+                # Handle form submission here
+                pass
+                
 def show_success(card_data):
     st.success("🎉 Your digital business card was created successfully!")
     
