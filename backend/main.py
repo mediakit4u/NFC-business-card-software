@@ -14,7 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporary for testing
+    allow_origins=[
+        "https://nfc-business-card-software-mediakit.streamlit.app",  # Your frontend
+        "http://localhost:8501"  # For local testing
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
