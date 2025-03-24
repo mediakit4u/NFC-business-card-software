@@ -57,74 +57,81 @@ def main():
     
     st.title("📇 NFC Digital Business Card Creator")
     st.markdown("Create your professional digital business card with QR code and NFC capability")
-    
+
     with st.form("card_form"):
-        col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Personal Information")
+        name = st.text_input("Full Name*")
+        title = st.text_input("Job Title*")
+        company = st.text_input("Company*")
+        phone = st.text_input("Phone*")
+        email = st.text_input("Email*")
         
-        with col1:
-            st.subheader("Personal Information")
-            name = st.text_input("Full Name*")
-            title = st.text_input("Job Title*")
-            company = st.text_input("Company*")
-            phone = st.text_input("Phone*")
-            email = st.text_input("Email*")
-            
-        with col2:
-            st.subheader("Additional Details")
-            website = st.text_input("Website")
-            linkedin = st.text_input("LinkedIn URL")
-            twitter = st.text_input("Twitter URL")
-            profile_img = st.file_uploader("Profile Photo", type=["jpg", "png", "jpeg"])
-        
-        submitted = st.form_submit_button("Create Digital Card")
-        
-        if submitted:
-            if not all([name, title, company, phone, email]):
-                st.error("Please fill all required fields (*)")
-            elif not validate_urls(website, linkedin, twitter):
-                st.error("Please enter valid URLs (start with http:// or https://)")
-            else:
-                create_card(
-                    name, title, company, phone, email,
-                    website, linkedin, twitter, profile_img
-                )
-
-def validate_urls(website, linkedin, twitter):
-    urls = [u for u in [website, linkedin, twitter] if u]
-    return all(validators.url(url) for url in urls)
-
-def create_card(name, title, company, phone, email, website, linkedin, twitter, profile_img):
-    with st.spinner("Creating your digital card..."):
-        try:
-            files = {}
-            if profile_img:
-                files = {"profile_image": profile_img}
-            
-            response = requests.post(
-                f"{BACKEND_URL}/api/cards",
-                data={
-                    "name": name,
-                    "title": title,
-                    "company": company,
-                    "phone": phone,
-                    "email": email,
-                    "website": website or "",
-                    "linkedin": linkedin or "",
-                    "twitter": twitter or ""
-                },
-                files=files
-            )
-            
-            if response.status_code == 200:
-                show_success(response.json())
-            else:
-                st.error(f"Error creating card: {response.text}")
-                
-        except requests.exceptions.ConnectionError:
-            st.error("Could not connect to the server. Is the backend running?")
-        except Exception as e:
-            st.error(f"An unexpected error occurred: {str(e)}")
-
+    with col2:
+        st.subheader("Additional Details")
+        website = st.text_input("Website")
+        linkedin = st.text_input("LinkedIn URL")
+        twitter = st.text_input("Twitter URL")
+        profile_img = st.file_uploader("Profile Photo", type=["jpg", "png", "jpeg"])
+    
+    submitted = st.form_submit_button("Create Digital Card")
+    
+    if submitted:
+        # Input validation (keep your existing checks)
+        if not all([name, title, company, phone, email]):
+            st.error("Please fill all required fields (*)")
+        elif not validate_urls(website, linkedin, twitter):
+            st.error("Please enter valid URLs (start with http:// or https://)")
+        else:
+            with st.spinner("Creating your digital card..."):
+                try:
+                    # Prepare form data
+                    form_data = {
+                        "name": name,
+                        "title": title,
+                        "company": company,
+                        "phone": phone,
+                        "email": email,
+                        "website": website or "",
+                        "linkedin": linkedin or "",
+                        "twitter": twitter or ""
+                    }
+                    
+                    # Prepare files if image uploaded
+                    files = {}
+                    if profile_img:
+                        files = {"profile_image": (profile_img.name, profile_img.getvalue())}
+                    
+                    # API call with timeout
+                    response = requests.post(
+                        f"{BACKEND_URL}/api/cards",
+                        data=form_data,
+                        files=files,
+                        timeout=15  # Important for Render
+                    )
+                    
+                    # Handle response
+                    if response.status_code == 200:
+                        card_data = response.json()
+                        st.success("Card created successfully!")
+                        
+                        # Show QR code if returned
+                        if "qr_url" in card_data:
+                            st.image(card_data["qr_url"], caption="Your NFC QR Code")
+                        
+                        # Optional: Clear form on success
+                        st.session_state.form_cleared = True  
+                        
+                    else:
+                        st.error(f"Backend error: {response.text}")
+                        
+                except requests.exceptions.Timeout:
+                    st.error("Request timed out. Please try again.")
+                except Exception as e:
+                    st.error(f"Unexpected error: {str(e)}")
+                    
 def show_success(card_data):
     st.success("🎉 Your digital business card was created successfully!")
     
