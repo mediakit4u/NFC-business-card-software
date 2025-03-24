@@ -9,6 +9,12 @@ import validators
 # Configuration
 BACKEND_URL = os.getenv("https://nfc-business-card-software.onrender.com", "http://localhost:8000")
 
+response = requests.post(
+    f"{BACKEND_URL}/api/cards",
+    data={...},  # Your form data
+    files={...}   # Your uploaded file
+)
+
 def main():
     st.set_page_config(
         page_title="NFC Business Card Creator",
