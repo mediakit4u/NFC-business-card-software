@@ -10,14 +10,28 @@ import qrcode
 
 app = FastAPI()
 
-# Setup directories
-BASE_DIR = Path(__file__).parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-QR_DIR = BASE_DIR / "static" / "qr_codes"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(QR_DIR, exist_ok=True)
+# Initialize directories SAFELY
+def init_directories():
+    BASE_DIR = Path(__file__).parent
+    directories = [
+        BASE_DIR / "uploads",
+        BASE_DIR / "static",
+        BASE_DIR / "static/qr_codes",
+        BASE_DIR / "templates"
+    ]
+    
+    for directory in directories:
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            if e.errno != 17:  # Ignore "File exists" errors
+                raise
 
-# Mount static files and templates
+# Call this before mounting static files
+init_directories()
+
+# Now mount static files
+BASE_DIR = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
