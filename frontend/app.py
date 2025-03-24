@@ -7,7 +7,7 @@ import os
 import validators
 
 # Configuration
-BACKEND_URL = "https://nfc-business-card-software.onrender.com"
+BACKEND_URL = "https://nfc-business-card-software.onrender.com" # your render url
     
 response = requests.post(
     f"{BACKEND_URL}/api/cards",
