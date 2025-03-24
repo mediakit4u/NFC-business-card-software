@@ -7,24 +7,13 @@ import os
 import validators
 
 # Configuration
-BACKEND_URL = "https://nfc-business-card-software.onrender.com"
-
-# API call example
-try:
-    response = requests.post(
-        f"{BACKEND_URL}/api/cards",
-        json={
-            "name": "John Doe",
-            "email": "john@example.com"
-            # Add other fields
-        },
-        timeout=10
-    )
+BACKEND_URL = "https://nfc-business-card-software.onrender.com
     
 response = requests.post(
     f"{BACKEND_URL}/api/cards",
     data={...},  # Your form data
-    files={...}   # Your uploaded file
+    files={...},  # Your uploaded file
+    timeout=10
 )
 
 def main():
