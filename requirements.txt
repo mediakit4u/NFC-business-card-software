@@ -2,7 +2,12 @@
 fastapi==0.95.2
 uvicorn==0.22.0
 python-multipart==0.0.6
-qrcode[pil]==7.4.2 
-pillow>=10.0.0
 
 #frontend
+streamlit==1.22.0
+requests==2.28.2
+validators==0.20.0
+
+# Shared Dependencies
+pillow>=10.0.0
+qrcode[pil]==7.4.2
