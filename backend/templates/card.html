@@ -1,1 +1,42 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{card.name}} | Business Card</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="business-card">
+        <div class="profile-section">
+            <img src="/{{card.profile_image}}" alt="{{card.name}}" class="profile-image">
+        </div>
+        
+        <div class="info-section">
+            <h1>{{card.name}}</h1>
+            <h2>{{card.title}}</h2>
+            <h3>{{card.company}}</h3>
+            
+            <div class="contact-info">
+                <p><i class="fas fa-phone"></i> {{card.phone}}</p>
+                <p><i class="fas fa-envelope"></i> {{card.email}}</p>
+                {% if card.website %}
+                <p><i class="fas fa-globe"></i> <a href="{{card.website}}" target="_blank">{{card.website}}</a></p>
+                {% endif %}
+            </div>
+            
+            <div class="social-links">
+                {% if card.linkedin %}
+                <a href="{{card.linkedin}}" target="_blank"><i class="fab fa-linkedin"></i></a>
+                {% endif %}
+                {% if card.twitter %}
+                <a href="{{card.twitter}}" target="_blank"><i class="fab fa-twitter"></i></a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>
