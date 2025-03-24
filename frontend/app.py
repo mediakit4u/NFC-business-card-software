@@ -8,6 +8,18 @@ import validators
 
 # Configuration
 BACKEND_URL = "https://nfc-business-card-software.onrender.com" # your render url
+
+
+def test_connection():
+    try:
+        response = requests.get(f"{BACKEND_URL}/", timeout=5)
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+# Test connection on app load
+connection_status = test_connection()
+st.write("Backend status:", connection_status)
     
 response = requests.post(
     f"{BACKEND_URL}/api/cards",
