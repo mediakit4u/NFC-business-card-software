@@ -11,3 +11,4 @@ validators==0.20.0
 # Shared Dependencies
 pillow>=10.0.0
 qrcode[pil]==7.4.2
+slowapi==0.1.7
