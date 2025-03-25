@@ -31,24 +31,18 @@ UPLOADS_DIR = STATIC_DIR / "uploads"
 QR_CODES_DIR = STATIC_DIR / "qr_codes"
 TEMPLATES_DIR = BASE_DIR / "templates"
 INSTANCE_DIR = BASE_DIR / "instance"
-DB_PATH = str(INSTANCE_DIR / "business_cards.db")  # String path for Render compatibility
+DB_PATH = str(INSTANCE_DIR / "business_cards.db")
 
 # Safe directory creation
 def init_directories():
-    required_dirs = [
-        STATIC_DIR,
-        UPLOADS_DIR,
-        QR_CODES_DIR,
-        TEMPLATES_DIR,
-        INSTANCE_DIR
-    ]
+    required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
     for directory in required_dirs:
         try:
             directory.mkdir(parents=True, exist_ok=True)
         except FileExistsError:
-            pass  # Directory already exists, which is fine
+            pass
         except Exception as e:
-            logging.error(f"Error creating directory {directory}: {str(e)}")
+            logging.error(f"Directory creation error: {str(e)}")
             raise
 
 init_directories()
@@ -78,7 +72,7 @@ def init_db():
         """)
         conn.commit()
     except Exception as e:
-        logging.error(f"Database initialization error: {str(e)}")
+        logging.error(f"Database init error: {str(e)}")
         raise
     finally:
         conn.close()
@@ -117,7 +111,7 @@ async def create_card(
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
                 buffer.write(await profile_img.read())
 
-        # Save to database
+        # Database operation
         conn = sqlite3.connect(DB_PATH)
         try:
             conn.execute(
@@ -131,7 +125,7 @@ async def create_card(
         finally:
             conn.close()
 
-        # Generate QR code
+        # QR Code Generation
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
@@ -153,7 +147,7 @@ async def create_card(
         })
 
     except Exception as e:
-        logging.error(f"Error creating card: {str(e)}")
+        logging.error(f"Card creation error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/cards/{card_id}", response_class=HTMLResponse)
@@ -174,7 +168,7 @@ async def view_card(card_id: str, request: Request):
             {"request": request, "card": dict(card)}
         )
     except Exception as e:
-        logging.error(f"Error viewing card: {str(e)}")
+        logging.error(f"Card view error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/health")
