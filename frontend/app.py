@@ -146,8 +146,10 @@ if __name__ == "__main__":
         try:
             response = requests.get(f"{BACKEND_URL}/health", timeout=5)
             if response.status_code == 200:
-                st.toast("✅ Backend connected successfully", icon="✅")
+                st.success("✅ Backend connected successfully")
+            else:
+                st.warning("⚠️ Backend connection check failed")
         except:
-            st.toast("⚠️ Backend connection check failed", icon="⚠️")
+            st.warning("⚠️ Backend connection check failed")
     
     main()
