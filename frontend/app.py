@@ -3,7 +3,7 @@ import requests
 import validators
 
 # Configuration
-BACKEND_URL = "https://nfc-business-card-software.onrender.com"
+BACKEND_URL = "https://nfc-business-card-software.onrender.com" 
 
 def validate_urls(*urls):
     for url in urls:
