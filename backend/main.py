@@ -10,6 +10,7 @@ from pathlib import Path
 import qrcode
 from typing import Optional
 import logging
+import asyncio
 
 # Initialize app
 app = FastAPI()
@@ -22,6 +23,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Timeout middleware to prevent 504 errors
+@app.middleware("http")
+async def timeout_middleware(request: Request, call_next):
+    try:
+        return await asyncio.wait_for(call_next(request), timeout=25)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Request timeout")
 
 # Base directory setup
 BASE_DIR = Path(__file__).parent
@@ -40,7 +49,6 @@ def init_directories():
             directory.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logging.error(f"Error creating {directory}: {str(e)}")
-            raise
 
 init_directories()
 
@@ -48,11 +56,14 @@ init_directories()
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Database setup
+# Database setup with WAL mode for Render.com
 def init_db():
     try:
         conn = sqlite3.connect(DB_PATH)
-        conn.execute("""
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS cards (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -70,7 +81,6 @@ def init_db():
         conn.commit()
     except Exception as e:
         logging.error(f"Database error: {str(e)}")
-        raise
     finally:
         conn.close()
 
@@ -96,7 +106,7 @@ async def create_card(
         card_id = str(uuid.uuid4())
         profile_path = "static/default.png"
 
-        # Handle file upload
+        # File upload handling
         if profile_img and profile_img.filename:
             file_ext = os.path.splitext(profile_img.filename)[1].lower()
             if file_ext not in ['.jpg', '.jpeg', '.png']:
@@ -125,7 +135,8 @@ async def create_card(
         finally:
             conn.close()
 
-        # Generate QR code
+        # QR Code generation
+        QR_CODES_DIR.mkdir(exist_ok=True)
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
@@ -150,27 +161,6 @@ async def create_card(
         raise
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(500, detail="Internal server error")
-
-@app.get("/cards/{card_id}", response_class=HTMLResponse)
-async def view_card(card_id: str, request: Request):
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        card = conn.execute(
-            "SELECT * FROM cards WHERE id = ?", (card_id,)
-        ).fetchone()
-        conn.close()
-        
-        if not card:
-            raise HTTPException(404, detail="Card not found")
-        
-        return templates.TemplateResponse(
-            "card.html",
-            {"request": request, "card": dict(card)}
-        )
-    except Exception as e:
-        logging.error(f"Error viewing card: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/health")
