@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import validators
-from PIL import Image
 
 # Configuration
 BACKEND_URL = "https://nfc-business-card-software.onrender.com"
@@ -57,6 +56,18 @@ def main():
     st.title("📇 NFC Digital Business Card Creator")
     st.markdown("Create your professional digital business card with QR code and NFC capability")
 
+    # Check backend connection
+    if 'backend_checked' not in st.session_state:
+        try:
+            response = requests.get(f"{BACKEND_URL}/health", timeout=5)
+            if response.status_code == 200:
+                st.success("✅ Backend connected successfully")
+            else:
+                st.warning("⚠️ Backend connection check failed")
+        except Exception:
+            st.warning("⚠️ Backend connection check failed")
+        st.session_state.backend_checked = True
+
     # Form
     with st.form("card_form"):
         col1, col2 = st.columns(2)
@@ -91,7 +102,7 @@ def main():
             elif not validate_urls(website, linkedin, twitter):
                 st.error("Invalid URL format (include https://)")
             else:
-                with st.spinner("Creating your card..."):  # Using spinner for wider compatibility
+                with st.spinner("Creating your card..."):
                     try:
                         # Prepare data
                         card_data = {
@@ -108,17 +119,7 @@ def main():
                         # Prepare files
                         files = None
                         if profile_img:
-                            # Validate image size
-                            if profile_img.size > 2 * 1024 * 1024:  # 2MB
-                                raise ValueError("Image too large (max 2MB)")
-                            
-                            # Validate image content
-                            try:
-                                Image.open(profile_img).verify()
-                                profile_img.seek(0)  # Reset file pointer after verification
-                                files = {"profile_img": profile_img}
-                            except Exception:
-                                raise ValueError("Invalid image file")
+                            files = {"profile_img": profile_img}
                         
                         # API call
                         response = requests.post(
@@ -133,23 +134,15 @@ def main():
                         show_success(response.json())
                         
                     except requests.exceptions.RequestException as e:
-                        st.error(f"Network error: {str(e)}")
-                    except ValueError as e:
-                        st.error(str(e))
+                        if hasattr(e, 'response') and e.response:
+                            if e.response.status_code == 500:
+                                st.error("Server error: Please try again later")
+                            else:
+                                st.error(f"Request failed with status {e.response.status_code}")
+                        else:
+                            st.error(f"Network error: {str(e)}")
                     except Exception as e:
                         st.error(f"An unexpected error occurred: {str(e)}")
 
 if __name__ == "__main__":
-    # Initialize session state
-    if 'init' not in st.session_state:
-        st.session_state.init = True
-        try:
-            response = requests.get(f"{BACKEND_URL}/health", timeout=5)
-            if response.status_code == 200:
-                st.success("✅ Backend connected successfully")
-            else:
-                st.warning("⚠️ Backend connection check failed")
-        except:
-            st.warning("⚠️ Backend connection check failed")
-    
     main()
