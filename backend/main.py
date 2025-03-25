@@ -1,10 +1,8 @@
-from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException, Depends
+from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import APIKeyHeader
-from pydantic import BaseSettings
 import sqlite3
 import os
 import uuid
@@ -13,76 +11,56 @@ import qrcode
 from PIL import Image
 from typing import Optional
 import logging
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.middleware import SlowAPIMiddleware
 
-# --- Configuration ---
-class Settings(BaseSettings):
-    database_url: str = "sqlite:///instance/business_cards.db"
-    allow_origins: str = "*"  # Change to your frontend URL in production
-    api_key: str = "your-secure-api-key"  # Generate a real one for production
-    debug: bool = False
+# Initialize app
+app = FastAPI()
 
-    class Config:
-        env_file = ".env"
-
-settings = Settings()
-
-# --- App Initialization ---
-app = FastAPI(debug=settings.debug)
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
-
-# --- Security ---
-api_key_header = APIKeyHeader(name="X-API-Key")
-
-async def validate_api_key(api_key: str = Depends(api_key_header)):
-    if api_key != settings.api_key:
-        raise HTTPException(status_code=403, detail="Invalid API Key")
-    return api_key
-
-# --- CORS ---
+# Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allow_origins.split(","),
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- Directory Setup ---
+# Base directory setup
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
 UPLOADS_DIR = STATIC_DIR / "uploads"
 QR_CODES_DIR = STATIC_DIR / "qr_codes"
 TEMPLATES_DIR = BASE_DIR / "templates"
 INSTANCE_DIR = BASE_DIR / "instance"
-DB_PATH = INSTANCE_DIR / "business_cards.db"
+DB_PATH = str(INSTANCE_DIR / "business_cards.db")  # String path for Render compatibility
 
+# Safe directory creation
 def init_directories():
-    required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
+    required_dirs = [
+        STATIC_DIR,
+        UPLOADS_DIR,
+        QR_CODES_DIR,
+        TEMPLATES_DIR,
+        INSTANCE_DIR
+    ]
     for directory in required_dirs:
-        directory.mkdir(parents=True, exist_ok=True)
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+        except FileExistsError:
+            pass  # Directory already exists, which is fine
+        except Exception as e:
+            logging.error(f"Error creating directory {directory}: {str(e)}")
+            raise
 
 init_directories()
 
-# --- Static Files ---
+# Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# --- Database ---
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
-
+# Database setup
 def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
+    try:
+        conn = sqlite3.connect(DB_PATH)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS cards (
                 id TEXT PRIMARY KEY,
@@ -99,18 +77,18 @@ def init_db():
             )
         """)
         conn.commit()
+    except Exception as e:
+        logging.error(f"Database initialization error: {str(e)}")
+        raise
+    finally:
+        conn.close()
 
 @app.on_event("startup")
 async def startup():
+    logging.basicConfig(level=logging.INFO)
     init_db()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
 
-# --- Routes ---
 @app.post("/api/cards")
-@limiter.limit("10/minute")
 async def create_card(
     request: Request,
     name: str = Form(...),
@@ -121,14 +99,13 @@ async def create_card(
     website: Optional[str] = Form(None),
     linkedin: Optional[str] = Form(None),
     twitter: Optional[str] = Form(None),
-    profile_img: Optional[UploadFile] = File(None),
-    db: sqlite3.Connection = Depends(get_db)
+    profile_img: Optional[UploadFile] = File(None)
 ):
     try:
         card_id = str(uuid.uuid4())
         profile_path = "static/default.png"
 
-        # File upload handling
+        # Handle file upload
         if profile_img and profile_img.filename:
             file_ext = os.path.splitext(profile_img.filename)[1].lower()
             if file_ext not in ['.jpg', '.jpeg', '.png']:
@@ -140,17 +117,21 @@ async def create_card(
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
                 buffer.write(await profile_img.read())
 
-        # Database operation
-        db.execute(
-            """INSERT INTO cards 
-            (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (card_id, name, title, company, phone, email, 
-             website, linkedin, twitter, profile_path)
-        )
-        db.commit()
+        # Save to database
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            conn.execute(
+                """INSERT INTO cards 
+                (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (card_id, name, title, company, phone, email, 
+                 website, linkedin, twitter, profile_path)
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
-        # QR Code Generation
+        # Generate QR code
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
@@ -171,20 +152,20 @@ async def create_card(
             "qr_url": f"/static/qr_codes/{qr_filename}"
         })
 
-    except sqlite3.Error as e:
-        logging.error(f"Database error: {str(e)}")
-        raise HTTPException(500, detail="Database operation failed")
-    except IOError as e:
-        logging.error(f"Filesystem error: {str(e)}")
-        raise HTTPException(500, detail="File storage failed")
     except Exception as e:
-        logging.error(f"Unexpected error: {str(e)}")
+        logging.error(f"Error creating card: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/cards/{card_id}", response_class=HTMLResponse)
-async def view_card(card_id: str, request: Request, db: sqlite3.Connection = Depends(get_db)):
+async def view_card(card_id: str, request: Request):
     try:
-        card = db.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        card = conn.execute(
+            "SELECT * FROM cards WHERE id = ?", (card_id,)
+        ).fetchone()
+        conn.close()
+        
         if not card:
             raise HTTPException(404, detail="Card not found")
         
@@ -193,18 +174,7 @@ async def view_card(card_id: str, request: Request, db: sqlite3.Connection = Dep
             {"request": request, "card": dict(card)}
         )
     except Exception as e:
-        logging.error(f"Card view error: {str(e)}")
-        raise HTTPException(500, detail="Internal server error")
-
-@app.get("/api/cards/{card_id}")
-async def get_card_data(card_id: str, db: sqlite3.Connection = Depends(get_db)):
-    try:
-        card = db.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-        if not card:
-            raise HTTPException(404, detail="Card not found")
-        return JSONResponse(dict(card))
-    except Exception as e:
-        logging.error(f"Card data error: {str(e)}")
+        logging.error(f"Error viewing card: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/health")
@@ -213,4 +183,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
