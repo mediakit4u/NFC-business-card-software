@@ -8,7 +8,6 @@ import os
 import uuid
 from pathlib import Path
 import qrcode
-from PIL import Image
 from typing import Optional
 import logging
 
@@ -33,16 +32,14 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 INSTANCE_DIR = BASE_DIR / "instance"
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
 
-# Safe directory creation
+# Initialize directories
 def init_directories():
     required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
     for directory in required_dirs:
         try:
             directory.mkdir(parents=True, exist_ok=True)
-        except FileExistsError:
-            pass
         except Exception as e:
-            logging.error(f"Directory creation error: {str(e)}")
+            logging.error(f"Error creating {directory}: {str(e)}")
             raise
 
 init_directories()
@@ -72,7 +69,7 @@ def init_db():
         """)
         conn.commit()
     except Exception as e:
-        logging.error(f"Database init error: {str(e)}")
+        logging.error(f"Database error: {str(e)}")
         raise
     finally:
         conn.close()
@@ -109,7 +106,10 @@ async def create_card(
             profile_path = f"static/uploads/{profile_filename}"
             
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
-                buffer.write(await profile_img.read())
+                content = await profile_img.read()
+                if len(content) > 2 * 1024 * 1024:  # 2MB limit
+                    raise HTTPException(400, detail="Image too large (max 2MB)")
+                buffer.write(content)
 
         # Database operation
         conn = sqlite3.connect(DB_PATH)
@@ -125,7 +125,7 @@ async def create_card(
         finally:
             conn.close()
 
-        # QR Code Generation
+        # Generate QR code
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
@@ -140,14 +140,16 @@ async def create_card(
         qr_filename = f"{card_id}.png"
         qr_img.save(QR_CODES_DIR / qr_filename)
 
-        return JSONResponse({
+        return {
             "id": card_id,
             "view_url": f"/cards/{card_id}",
             "qr_url": f"/static/qr_codes/{qr_filename}"
-        })
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"Card creation error: {str(e)}")
+        logging.error(f"Unexpected error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/cards/{card_id}", response_class=HTMLResponse)
@@ -168,7 +170,7 @@ async def view_card(card_id: str, request: Request):
             {"request": request, "card": dict(card)}
         )
     except Exception as e:
-        logging.error(f"Card view error: {str(e)}")
+        logging.error(f"Error viewing card: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
 @app.get("/health")
