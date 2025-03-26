@@ -118,7 +118,7 @@ async def create_card(
 ):
     try:
          card_id = str(uuid.uuid4())
-        profile_url = "static/default.png"  # Default URL
+        profile_url = "static/css/default.png"  # Default URL
 
         # File upload handling 
         if profile_img and profile_img.filename:
