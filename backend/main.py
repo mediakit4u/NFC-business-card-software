@@ -167,6 +167,29 @@ async def create_card(
 async def health_check():
     return {"status": "healthy", "service": "NFC Business Cards API"}
 
+
+#new code for view card error
+@app.get("/cards/{card_id}", response_class=HTMLResponse)
+async def get_card(request: Request, card_id: str):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM cards WHERE id = ?", (card_id,))
+            card_data = cursor.fetchone()
+
+        if not card_data:
+            raise HTTPException(status_code=404, detail="Card not found")
+
+        # Convert SQLite row to dict
+        columns = [col[0] for col in cursor.description]
+        card = dict(zip(columns, card_data))
+
+        return templates.TemplateResponse("card.html", {"request": request, "card": card})
+
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {str(e)}")
+        raise HTTPException(500, detail="Database error")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
