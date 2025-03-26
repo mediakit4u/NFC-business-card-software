@@ -117,20 +117,25 @@ async def create_card(
     profile_img: Optional[UploadFile] = File(None)
 ):
     try:
-        card_id = str(uuid.uuid4())
-        profile_path = "static/default.png"
+         card_id = str(uuid.uuid4())
+        profile_url = "static/default.png"  # Default URL
 
-        # File upload handling (using /tmp)
+        # File upload handling 
         if profile_img and profile_img.filename:
-              profile_url = f"{request.base_url}static/uploads/{profile_filename}"  # This is new
-            file_ext = os.path.splitext(profile_img.filename)[1].lower()
+            # Fix indentation here ▼ (4 spaces)
+            file_ext = os.path.splitext(profile_img.filename)[1].lower()  # Line 126
             if file_ext not in ['.jpg', '.jpeg', '.png']:
                 raise HTTPException(400, detail="Only JPG/PNG images allowed")
             
             profile_filename = f"{card_id}{file_ext}"
-           #old profile_path = f"/tmp/uploads/{profile_filename}"
-           #old profile_path = f"/static/uploads/{profile_filename}"  # URL path
-            profile_url = f"{request.base_url}static/uploads/{profile_filename}"
+            profile_url = f"{request.base_url}static/uploads/{profile_filename}"  # URL path
+
+            # Ensure this block is properly indented ▼
+            with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
+                content = await profile_img.read()
+                if len(content) > 2 * 1024 * 1024:  # 2MB limit
+                    raise HTTPException(400, detail="Image too large (max 2MB)")
+                buffer.write(content)
 
          # Database insertion
     conn.execute(
