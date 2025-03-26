@@ -1,9 +1,10 @@
 import streamlit as st
 import requests
 import validators
+import pyperclip  # For clipboard functionality
 
 # Configuration
-BACKEND_URL = "https://nfc-business-card-software.onrender.com" 
+BACKEND_URL = "https://nfc-business-card-software.onrender.com"
 
 def validate_urls(*urls):
     for url in urls:
@@ -18,20 +19,24 @@ def show_success(card_data):
     
     with col1:
         st.markdown("### Your Card Details")
+        view_url = f"{BACKEND_URL}{card_data['view_url']}"
+        
+        # Copy functionality with feedback
+        copy_col, _ = st.columns([1, 3])
+        with copy_col:
+            if st.button("📋 Copy Card URL", key="copy_url"):
+                pyperclip.copy(view_url)
+                st.toast("URL copied to clipboard!", icon="✅")
+        
         st.markdown(f"""
-        - **View Online:** [Open Card]({BACKEND_URL}{card_data['view_url']})
+        - **View Online:** [Open Card]({view_url})
         - **Card ID:** `{card_data['id']}`
         """)
-        
-        if st.button("📋 Copy Card URL"):
-            st.session_state.card_url = f"{BACKEND_URL}{card_data['view_url']}"
-            st.experimental_rerun()
-        
-        if 'card_url' in st.session_state:
-            st.code(st.session_state.card_url)
+        st.code(view_url)
     
     with col2:
-        st.image(f"{BACKEND_URL}{card_data['qr_url']}", 
+        qr_url = f"{BACKEND_URL}{card_data['qr_url']}"
+        st.image(qr_url, 
                 caption="Scan this QR code to view your card",
                 width=200)
     
@@ -52,17 +57,19 @@ def main():
     st.title("📇 NFC Digital Business Card Creator")
     st.markdown("Create your professional digital business card with QR code and NFC capability")
 
-    # Backend connection check
+    # Backend connection check (runs once per session)
     if 'backend_checked' not in st.session_state:
         try:
             response = requests.get(f"{BACKEND_URL}/health", timeout=10)
             if response.status_code == 200:
-                st.success("✅ Backend connected")
+                st.session_state.backend_status = "✅ Backend connected"
             else:
-                st.warning("⚠️ Backend connection unstable")
+                st.session_state.backend_status = "⚠️ Backend connection unstable"
         except Exception:
-            st.warning("⚠️ Could not connect to backend")
+            st.session_state.backend_status = "⚠️ Could not connect to backend"
         st.session_state.backend_checked = True
+    
+    st.info(st.session_state.backend_status)
 
     with st.form("card_form"):
         col1, col2 = st.columns(2)
@@ -85,17 +92,21 @@ def main():
                 type=["jpg", "png", "jpeg"]
             )
         
-        submitted = st.form_submit_button("Save Card")
+        submitted = st.form_submit_button("Create Digital Card")
         
-        if submitted:
-            if not all([name, title, company, phone, email]):
-                st.error("Please fill all required fields (*)")
-            elif not validate_urls(website, linkedin, twitter):
-                st.error("Invalid URL format (include https://)")
-            else:
-                with st.spinner("Creating your card (may take 20-30 seconds on first try)..."):
-                    try:
-                        card_data = {
+    if submitted:
+        if not all([name, title, company, phone, email]):
+            st.error("Please fill all required fields (*)")
+        elif not validate_urls(website, linkedin, twitter):
+            st.error("Invalid URL format (include https://)")
+        else:
+            with st.spinner("Creating your card (may take 20-30 seconds on first try)..."):
+                try:
+                    files = {"profile_img": profile_img} if profile_img else None
+                    
+                    response = requests.post(
+                        f"{BACKEND_URL}/api/cards",
+                        data={
                             "name": name,
                             "title": title,
                             "company": company,
@@ -104,25 +115,19 @@ def main():
                             "website": website or "",
                             "linkedin": linkedin or "",
                             "twitter": twitter or ""
-                        }
-                        
-                        files = {"profile_img": profile_img} if profile_img else None
-                        
-                        response = requests.post(
-                            f"{BACKEND_URL}/api/cards",
-                            data=card_data,
-                            files=files,
-                            timeout=25
-                        )
-                        response.raise_for_status()
-                        show_success(response.json())
-                        
-                    except requests.exceptions.Timeout:
-                        st.error("Backend is starting up. Please wait 30 seconds and try again.")
-                    except requests.exceptions.RequestException as e:
-                        st.error(f"Network error: {str(e)}")
-                    except Exception as e:
-                        st.error(f"Error creating card: {str(e)}")
+                        },
+                        files=files,
+                        timeout=25
+                    )
+                    response.raise_for_status()
+                    show_success(response.json())
+                    
+                except requests.exceptions.Timeout:
+                    st.error("Backend is starting up. Please wait 30 seconds and try again.")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"Network error: {str(e)}")
+                except Exception as e:
+                    st.error(f"Error creating card: {str(e)}")
 
 if __name__ == "__main__":
     main()
