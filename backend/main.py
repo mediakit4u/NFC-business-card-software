@@ -117,7 +117,10 @@ async def create_card(
                 raise HTTPException(400, detail="Only JPG/PNG images allowed")
             
             profile_filename = f"{card_id}{file_ext}"
-            profile_path = f"/tmp/uploads/{profile_filename}"
+           #old profile_path = f"/tmp/uploads/{profile_filename}"
+            profile_path = f"/static/uploads/{profile_filename}"  # URL path
+
+   
             
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
                 content = await profile_img.read()
