@@ -35,8 +35,10 @@ async def timeout_middleware(request: Request, call_next):
 # Base directory setup
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
-UPLOADS_DIR = Path("/tmp/uploads")  # Render-compatible path
-QR_CODES_DIR = Path("/tmp/qr_codes")  # Render-compatible path
+#UPLOADS_DIR = Path("/tmp/uploads")  # Render-compatible path
+#QR_CODES_DIR = Path("/tmp/qr_codes")  # Render-compatible path
+UPLOADS_DIR = STATIC_DIR / "uploads"
+QR_CODES_DIR = STATIC_DIR / "qr_codes"
 TEMPLATES_DIR = BASE_DIR / "templates"
 INSTANCE_DIR = BASE_DIR / "instance"
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
@@ -59,8 +61,9 @@ init_directories()
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 # Add after your existing static mount in backend/main.py
-app.mount("/static/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
-app.mount("/static/qr_codes", StaticFiles(directory=QR_CODES_DIR), name="qr_codes")
+#app.mount("/static/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+#app.mount("/static/qr_codes", StaticFiles(directory=QR_CODES_DIR), name="qr_codes")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Database setup
 def init_db():
@@ -118,7 +121,8 @@ async def create_card(
             
             profile_filename = f"{card_id}{file_ext}"
            #old profile_path = f"/tmp/uploads/{profile_filename}"
-            profile_path = f"/static/uploads/{profile_filename}"  # URL path
+           #old profile_path = f"/static/uploads/{profile_filename}"  # URL path
+            profile_url = f"{request.base_url}static/uploads/{profile_filename}"
 
    
             
