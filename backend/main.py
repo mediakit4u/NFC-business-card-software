@@ -117,9 +117,10 @@ async def create_card(
     profile_img: Optional[UploadFile] = File(None)
 ):
     try:
-         card_id = str(uuid.uuid4())
-        profile_url = "static/css/default.png"  # Default URL
-
+        
+        card_id = str(uuid.uuid4())
+        profile_url = "static/css/default.png"  # Default URL  <-- FIXED INDENTATION
+        
         # File upload handling 
         if profile_img and profile_img.filename:
             # Fix indentation here ▼ (4 spaces)
