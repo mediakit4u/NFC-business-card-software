@@ -90,7 +90,7 @@ def init_db():
                     website TEXT,
                     linkedin TEXT,
                     twitter TEXT,
-                    profile_url TEXT,
+                    profile_file TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -114,7 +114,7 @@ async def create_card(
     website: Optional[str] = Form(None),
     linkedin: Optional[str] = Form(None),
     twitter: Optional[str] = Form(None),
-    profile_url: Optional[UploadFile] = File(None)
+    profile_file: Optional[UploadFile] = File(None)
 ):
     try:
         card_id = str(uuid.uuid4())
