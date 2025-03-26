@@ -58,6 +58,9 @@ init_directories()
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+# Add after your existing static mount in backend/main.py
+app.mount("/static/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+app.mount("/static/qr_codes", StaticFiles(directory=QR_CODES_DIR), name="qr_codes")
 
 # Database setup
 def init_db():
