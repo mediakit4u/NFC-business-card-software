@@ -45,7 +45,14 @@ DB_PATH = str(INSTANCE_DIR / "business_cards.db")
 
 # Initialize directories
 def init_directories():
-    required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
+    required_dirs = [
+        STATIC_DIR,
+        UPLOADS_DIR,  # Now resolves to static/uploads
+        QR_CODES_DIR,  # Now resolves to static/qr_codes
+        TEMPLATES_DIR,
+        INSTANCE_DIR
+    ]
+    # ... rest of the function remains the same ...
     for directory in required_dirs:
         try:
             # Handle file/directory conflicts
