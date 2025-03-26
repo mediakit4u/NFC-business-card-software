@@ -188,7 +188,7 @@ async def create_card(
         }
 
     except HTTPException:
-        raise
+        raise  # Re-raise HTTPException (e.g., for 400 errors)
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
