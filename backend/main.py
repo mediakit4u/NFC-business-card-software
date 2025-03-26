@@ -90,7 +90,7 @@ def init_db():
                     website TEXT,
                     linkedin TEXT,
                     twitter TEXT,
-                    profile_file TEXT,
+                    profile_img TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -114,7 +114,7 @@ async def create_card(
     website: Optional[str] = Form(None),
     linkedin: Optional[str] = Form(None),
     twitter: Optional[str] = Form(None),
-    profile_file: Optional[UploadFile] = File(None)
+    profile_img: Optional[UploadFile] = File(None)
 ):
     try:
         card_id = str(uuid.uuid4())
@@ -122,6 +122,7 @@ async def create_card(
 
         # File upload handling (using /tmp)
         if profile_img and profile_img.filename:
+              profile_url = f"{request.base_url}static/uploads/{profile_filename}"  # This is new
             file_ext = os.path.splitext(profile_img.filename)[1].lower()
             if file_ext not in ['.jpg', '.jpeg', '.png']:
                 raise HTTPException(400, detail="Only JPG/PNG images allowed")
@@ -130,6 +131,15 @@ async def create_card(
            #old profile_path = f"/tmp/uploads/{profile_filename}"
            #old profile_path = f"/static/uploads/{profile_filename}"  # URL path
             profile_url = f"{request.base_url}static/uploads/{profile_filename}"
+
+         # Database insertion
+    conn.execute(
+        """INSERT INTO cards 
+        (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (card_id, name, title, company, phone, email, 
+         website, linkedin, twitter, profile_url)  # Changed from profile_path to profile_url
+    )
 
    
             
