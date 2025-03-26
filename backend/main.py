@@ -46,9 +46,12 @@ def init_directories():
     required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
     for directory in required_dirs:
         try:
-            directory.mkdir(parents=True, exist_ok=True)
+            # Check if path exists and is a file (not a directory)
+            if directory.exists() and not directory.is_dir():
+                os.remove(str(directory))  # Delete the conflicting file
+            directory.mkdir(parents=True, exist_ok=True)  # Safe creation
         except Exception as e:
-            logging.error(f"Error creating {directory}: {str(e)}")
+            logging.error(f"Error initializing {directory}: {str(e)}")
 
 init_directories()
 
@@ -136,7 +139,7 @@ async def create_card(
             conn.close()
 
         # QR Code generation
-        QR_CODES_DIR.mkdir(exist_ok=True)
+       # QR_CODES_DIR.mkdir(exist_ok=True)
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
