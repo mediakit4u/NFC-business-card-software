@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Timeout middleware to prevent 504 errors
+# Timeout middleware
 @app.middleware("http")
 async def timeout_middleware(request: Request, call_next):
     try:
@@ -35,8 +35,8 @@ async def timeout_middleware(request: Request, call_next):
 # Base directory setup
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
-UPLOADS_DIR = STATIC_DIR / "uploads"
-QR_CODES_DIR = STATIC_DIR / "qr_codes"
+UPLOADS_DIR = Path("/tmp/uploads")  # Render-compatible path
+QR_CODES_DIR = Path("/tmp/qr_codes")  # Render-compatible path
 TEMPLATES_DIR = BASE_DIR / "templates"
 INSTANCE_DIR = BASE_DIR / "instance"
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
@@ -46,10 +46,10 @@ def init_directories():
     required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
     for directory in required_dirs:
         try:
-            # Check if path exists and is a file (not a directory)
+            # Handle file/directory conflicts
             if directory.exists() and not directory.is_dir():
-                os.remove(str(directory))  # Delete the conflicting file
-            directory.mkdir(parents=True, exist_ok=True)  # Safe creation
+                os.remove(str(directory))
+            directory.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logging.error(f"Error initializing {directory}: {str(e)}")
 
@@ -59,33 +59,31 @@ init_directories()
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Database setup with WAL mode for Render.com
+# Database setup
 def init_db():
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA busy_timeout=5000")
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cards (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                title TEXT NOT NULL,
-                company TEXT NOT NULL,
-                phone TEXT NOT NULL,
-                email TEXT NOT NULL,
-                website TEXT,
-                linkedin TEXT,
-                twitter TEXT,
-                profile_image TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.commit()
+        with sqlite3.connect(DB_PATH) as conn:  # Use context manager
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA busy_timeout=5000")
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS cards (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    company TEXT NOT NULL,
+                    phone TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    website TEXT,
+                    linkedin TEXT,
+                    twitter TEXT,
+                    profile_image TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
     except Exception as e:
         logging.error(f"Database error: {str(e)}")
-    finally:
-        conn.close()
 
 @app.on_event("startup")
 async def startup():
@@ -109,14 +107,14 @@ async def create_card(
         card_id = str(uuid.uuid4())
         profile_path = "static/default.png"
 
-        # File upload handling
+        # File upload handling (using /tmp)
         if profile_img and profile_img.filename:
             file_ext = os.path.splitext(profile_img.filename)[1].lower()
             if file_ext not in ['.jpg', '.jpeg', '.png']:
                 raise HTTPException(400, detail="Only JPG/PNG images allowed")
             
             profile_filename = f"{card_id}{file_ext}"
-            profile_path = f"static/uploads/{profile_filename}"
+            profile_path = f"/tmp/uploads/{profile_filename}"
             
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
                 content = await profile_img.read()
@@ -124,9 +122,8 @@ async def create_card(
                     raise HTTPException(400, detail="Image too large (max 2MB)")
                 buffer.write(content)
 
-        # Database operation
-        conn = sqlite3.connect(DB_PATH)
-        try:
+        # Database operation (with context manager)
+        with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
                 """INSERT INTO cards 
                 (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
@@ -135,11 +132,8 @@ async def create_card(
                  website, linkedin, twitter, profile_path)
             )
             conn.commit()
-        finally:
-            conn.close()
 
-        # QR Code generation
-       # QR_CODES_DIR.mkdir(exist_ok=True)
+        # QR Code generation (no redundant mkdir)
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
@@ -157,7 +151,7 @@ async def create_card(
         return {
             "id": card_id,
             "view_url": f"/cards/{card_id}",
-            "qr_url": f"/static/qr_codes/{qr_filename}"
+            "qr_url": f"/static/qr_codes/{qr_filename}"  # Update frontend to use /tmp paths
         }
 
     except HTTPException:
