@@ -229,6 +229,37 @@ async def health_check():
         logger.error(f"Health check failed: {str(e)}")
         raise HTTPException(500, detail=str(e))
 
+@app.get("/cards/{card_id}")
+async def get_card(card_id: str):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM cards WHERE id = ?", (card_id,))
+        card = cursor.fetchone()
+        conn.close()
+        
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+            
+        return {
+            "name": card["name"],
+            "title": card["title"],
+            "company": card["company"],
+            "phone": card["phone"],
+            "email": card["email"],
+            "website": card["website"],
+            "linkedin": card["linkedin"],
+            "twitter": card["twitter"],
+            "profile_image": card["profile_image"]
+        }
+        
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {str(e)}")
+        raise HTTPException(500, detail="Database error")
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(500, detail="Internal server error")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=30)
