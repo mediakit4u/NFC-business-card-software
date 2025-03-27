@@ -40,6 +40,12 @@ UPLOADS_DIR = Path(tempfile.mkdtemp(prefix="uploads_"))
 QR_CODES_DIR = Path(tempfile.mkdtemp(prefix="qr_"))
 INSTANCE_DIR = Path(tempfile.mkdtemp(prefix="instance_"))
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
+# Create directories if they don't exist
+os.makedirs("static", exist_ok=True)  # For default.png
+os.makedirs("templates", exist_ok=True)  # For card.html
+os.makedirs(str(UPLOADS_DIR), exist_ok=True)  # For uploaded profile images
+os.makedirs(str(QR_CODES_DIR), exist_ok=True)  # For generated QR codes
+
 
 # Database connection with retry logic
 def get_db_connection():
