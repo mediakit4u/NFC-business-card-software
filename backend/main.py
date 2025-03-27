@@ -146,6 +146,7 @@ async def create_card(
         (card_id, name, title, company, phone, email, 
          website, linkedin, twitter, profile_url)  # Changed from profile_path to profile_url
     )
+    conn.commit()
 
    
             
