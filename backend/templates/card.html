@@ -1,42 +1,110 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{card.name}} | Business Card</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <title>{{name}}'s Digital Business Card</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 20px;
+            border: 3px solid #eee;
+        }
+        h1 {
+            margin: 0;
+            color: #333;
+        }
+        .title {
+            color: #666;
+            font-weight: normal;
+            margin: 5px 0;
+        }
+        .company {
+            color: #444;
+            font-size: 1.1em;
+        }
+        .contact-info {
+            margin: 20px 0;
+        }
+        .contact-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .contact-item i {
+            margin-right: 10px;
+            color: #555;
+            width: 20px;
+            text-align: center;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="business-card">
-        <div class="profile-section">
-            <img src="/{{card.profile_image}}" alt="{{card.name}}" class="profile-image">
+    <div class="card">
+        <div class="profile-header">
+            <img src="{{profile_image}}" alt="Profile Picture" class="profile-pic">
+            <div>
+                <h1>{{name}}</h1>
+                <div class="title">{{title}}</div>
+                <div class="company">{{company}}</div>
+            </div>
         </div>
-        
-        <div class="info-section">
-            <h1>{{card.name}}</h1>
-            <h2>{{card.title}}</h2>
-            <h3>{{card.company}}</h3>
-            
-            <div class="contact-info">
-                <p><i class="fas fa-phone"></i> {{card.phone}}</p>
-                <p><i class="fas fa-envelope"></i> {{card.email}}</p>
-                {% if card.website %}
-                <p><i class="fas fa-globe"></i> <a href="{{card.website}}" target="_blank">{{card.website}}</a></p>
-                {% endif %}
+
+        <div class="contact-info">
+            <div class="contact-item">
+                <i class="fas fa-phone"></i>
+                {{phone}}
             </div>
-            
-            <div class="social-links">
-                {% if card.linkedin %}
-                <a href="{{card.linkedin}}" target="_blank"><i class="fab fa-linkedin"></i></a>
-                {% endif %}
-                {% if card.twitter %}
-                <a href="{{card.twitter}}" target="_blank"><i class="fab fa-twitter"></i></a>
-                {% endif %}
+            <div class="contact-item">
+                <i class="fas fa-envelope"></i>
+                <a href="mailto:{{email}}">{{email}}</a>
             </div>
+            {% if website %}
+            <div class="contact-item">
+                <i class="fas fa-globe"></i>
+                <a href="{{website}}" target="_blank">{{website}}</a>
+            </div>
+            {% endif %}
+            {% if linkedin %}
+            <div class="contact-item">
+                <i class="fab fa-linkedin"></i>
+                <a href="{{linkedin}}" target="_blank">LinkedIn Profile</a>
+            </div>
+            {% endif %}
+            {% if twitter %}
+            <div class="contact-item">
+                <i class="fab fa-twitter"></i>
+                <a href="{{twitter}}" target="_blank">@{{twitter.split('/')[-1]}}</a>
+            </div>
+            {% endif %}
         </div>
     </div>
-    
-    <!-- Font Awesome for icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
