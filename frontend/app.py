@@ -4,7 +4,8 @@ import validators
 import pyperclip  # For clipboard functionality
 
 # Configuration
-BACKEND_URL = "https://nfc-business-card-software.onrender.com"
+# Change this line in frontend app.py:
+BACKEND_URL = "https://nfc-business-card-software.onrender.com"  # ← Replace with YOUR actual backend URL
 
 def validate_urls(*urls):
     for url in urls:
