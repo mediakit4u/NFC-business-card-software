@@ -100,8 +100,6 @@ async def startup_event():
 
 # Add this before your mount points to serve default.png
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
 # Mount static files
 app.mount("/static/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/static/qr_codes", StaticFiles(directory=str(QR_CODES_DIR)), name="qr_codes")
