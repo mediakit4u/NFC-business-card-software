@@ -35,27 +35,17 @@ async def timeout_middleware(request: Request, call_next):
 # Base directory setup
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
-#UPLOADS_DIR = Path("/tmp/uploads")  # Render-compatible path
-#QR_CODES_DIR = Path("/tmp/qr_codes")  # Render-compatible path
-UPLOADS_DIR = STATIC_DIR / "uploads"
-QR_CODES_DIR = STATIC_DIR / "qr_codes"
+UPLOADS_DIR = Path("/tmp/uploads")        # Render-compatible
+QR_CODES_DIR = Path("/tmp/qr_codes")      # Render-compatible
 TEMPLATES_DIR = BASE_DIR / "templates"
-INSTANCE_DIR = BASE_DIR / "instance"
+INSTANCE_DIR = Path("/tmp/instance")      # Render-compatible
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
 
 # Initialize directories
 def init_directories():
-    required_dirs = [
-        STATIC_DIR,
-        UPLOADS_DIR,  # Now resolves to static/uploads
-        QR_CODES_DIR,  # Now resolves to static/qr_codes
-        TEMPLATES_DIR,
-        INSTANCE_DIR
-    ]
-    # ... rest of the function remains the same ...
+    required_dirs = [STATIC_DIR, UPLOADS_DIR, QR_CODES_DIR, TEMPLATES_DIR, INSTANCE_DIR]
     for directory in required_dirs:
         try:
-            # Handle file/directory conflicts
             if directory.exists() and not directory.is_dir():
                 os.remove(str(directory))
             directory.mkdir(parents=True, exist_ok=True)
@@ -66,16 +56,14 @@ init_directories()
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
+app.mount("/static/qr_codes", StaticFiles(directory="/tmp/qr_codes"), name="qr_codes")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
-# Add after your existing static mount in backend/main.py
-#app.mount("/static/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
-#app.mount("/static/qr_codes", StaticFiles(directory=QR_CODES_DIR), name="qr_codes")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Database setup
 def init_db():
     try:
-        with sqlite3.connect(DB_PATH) as conn:  # Use context manager
+        with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA busy_timeout=5000")
@@ -90,7 +78,7 @@ def init_db():
                     website TEXT,
                     linkedin TEXT,
                     twitter TEXT,
-                    profile_img TEXT,
+                    profile_image TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -118,18 +106,17 @@ async def create_card(
 ):
     try:
         card_id = str(uuid.uuid4())
-        profile_url = "static/css/default.png"  # Default URL
+        profile_url = "static/default.png"
 
         # File upload handling
         if profile_img and profile_img.filename:
             file_ext = os.path.splitext(profile_img.filename)[1].lower()
             if file_ext not in ['.jpg', '.jpeg', '.png']:
                 raise HTTPException(400, detail="Only JPG/PNG images allowed")
-
+            
             profile_filename = f"{card_id}{file_ext}"
-            profile_url = f"static/uploads/{profile_filename}"  # Fixed URL path
+            profile_url = f"static/uploads/{profile_filename}"
 
-            # Write uploaded file
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
                 content = await profile_img.read()
                 if len(content) > 2 * 1024 * 1024:
@@ -176,33 +163,9 @@ async def create_card(
         logging.error(f"Unexpected error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
 
-
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "NFC Business Cards API"}
-
-
-#new code for view card error
-@app.get("/cards/{card_id}", response_class=HTMLResponse)
-async def get_card(request: Request, card_id: str):
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM cards WHERE id = ?", (card_id,))
-            card_data = cursor.fetchone()
-
-        if not card_data:
-            raise HTTPException(status_code=404, detail="Card not found")
-
-        # Convert SQLite row to dict
-        columns = [col[0] for col in cursor.description]
-        card = dict(zip(columns, card_data))
-
-        return templates.TemplateResponse("card.html", {"request": request, "card": card})
-
-    except sqlite3.Error as e:
-        logging.error(f"Database error: {str(e)}")
-        raise HTTPException(500, detail="Database error")
 
 if __name__ == "__main__":
     import uvicorn
