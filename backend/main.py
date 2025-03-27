@@ -203,7 +203,29 @@ async def get_card(card_id: str, request: Request):
     except Exception as e:
         logger.error(f"Error rendering card {card_id}: {str(e)}", exc_info=True)
         raise HTTPException(500, detail="Internal server error")
+@app.get("/debug/template")
+async def debug_template(request: Request):
+    """Test if templates are loading"""
+    return templates.TemplateResponse("card.html", {
+        "request": request,
+        "name": "Test Name",
+        "title": "Test Title",
+        "company": "Test Co",
+        "phone": "123-456-7890",
+        "email": "test@example.com",
+        "website": "https://example.com",
+        "linkedin": "https://linkedin.com/in/test",
+        "twitter": "https://twitter.com/test",
+        "profile_image": "/static/default.png"
+    })
 
+@app.get("/debug/db")
+async def debug_db():
+    """Test database connection"""
+    with get_db_connection() as conn:
+        cards = conn.execute("SELECT id, name FROM cards LIMIT 5").fetchall()
+    return {"cards": cards}
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
