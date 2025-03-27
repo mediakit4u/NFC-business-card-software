@@ -117,58 +117,39 @@ async def create_card(
     profile_img: Optional[UploadFile] = File(None)
 ):
     try:
-        
         card_id = str(uuid.uuid4())
-        profile_url = "static/css/default.png"  # Default URL  <-- FIXED INDENTATION
-        
-        # File upload handling 
+        profile_url = "static/css/default.png"  # Default URL
+
+        # File upload handling
         if profile_img and profile_img.filename:
-            # Fix indentation here ▼ (4 spaces)
-            file_ext = os.path.splitext(profile_img.filename)[1].lower()  # Line 126
+            file_ext = os.path.splitext(profile_img.filename)[1].lower()
             if file_ext not in ['.jpg', '.jpeg', '.png']:
                 raise HTTPException(400, detail="Only JPG/PNG images allowed")
-            
+
             profile_filename = f"{card_id}{file_ext}"
-            profile_url = f"{request.base_url}static/uploads/{profile_filename}"  # URL path
+            profile_url = f"static/uploads/{profile_filename}"  # Fixed URL path
 
-            # Ensure this block is properly indented ▼
+            # Write uploaded file
             with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
                 content = await profile_img.read()
-                if len(content) > 2 * 1024 * 1024:  # 2MB limit
+                if len(content) > 2 * 1024 * 1024:
                     raise HTTPException(400, detail="Image too large (max 2MB)")
                 buffer.write(content)
 
-         # Database insertion
-    conn.execute(
-        """INSERT INTO cards 
-        (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (card_id, name, title, company, phone, email, 
-         website, linkedin, twitter, profile_url)  # Changed from profile_path to profile_url
-    )
-    conn.commit()
-
-   
-            
-            with open(UPLOADS_DIR / profile_filename, "wb") as buffer:
-                content = await profile_img.read()
-                if len(content) > 2 * 1024 * 1024:  # 2MB limit
-                    raise HTTPException(400, detail="Image too large (max 2MB)")
-                buffer.write(content)
-
-        # Database operation (with context manager)
+        # Database operation
         with sqlite3.connect(DB_PATH) as conn:
-             cursor = conn.cursor()
-            conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 """INSERT INTO cards 
-                (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
+                (id, name, title, company, phone, email, 
+                 website, linkedin, twitter, profile_image)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (card_id, name, title, company, phone, email, 
-                 website, linkedin, twitter, profile_path)
+                (card_id, name, title, company, phone, email,
+                 website, linkedin, twitter, profile_url)
             )
             conn.commit()
 
-        # QR Code generation (no redundant mkdir)
+        # QR Code generation
         card_url = f"{request.base_url}cards/{card_id}"
         qr = qrcode.QRCode(
             version=1,
@@ -186,14 +167,15 @@ async def create_card(
         return {
             "id": card_id,
             "view_url": f"/cards/{card_id}",
-            "qr_url": f"/static/qr_codes/{qr_filename}"  # Update frontend to use /tmp paths
+            "qr_url": f"/static/qr_codes/{qr_filename}"
         }
 
     except HTTPException:
-        raise  # Re-raise HTTPException (e.g., for 400 errors)
+        raise
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
+
 
 @app.get("/health")
 async def health_check():
