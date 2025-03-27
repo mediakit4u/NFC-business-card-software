@@ -170,61 +170,33 @@ async def create_card(
 @app.get("/cards/{card_id}", response_class=HTMLResponse)
 async def get_card(card_id: str, request: Request):
     try:
-        logger.info(f"Attempting to fetch card: {card_id}")
-        
+        # Database fetch
         with get_db_connection() as conn:
-            card = conn.execute(
-                "SELECT * FROM cards WHERE id = ?", 
-                (card_id,)
-            ).fetchone()
+            card = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
         
         if not card:
-            logger.error(f"Card not found: {card_id}")
-            raise HTTPException(status_code=404, detail="Card not found")
+            raise HTTPException(404, detail="Card not found")
             
+        # Process image URL
         profile_image = card["profile_image"]
         if not profile_image.startswith(("http://", "https://")):
-            profile_image = str(request.base_url)[:-1] + profile_image
-            logger.info(f"Processed profile image URL: {profile_image}")
+            profile_image = f"{request.base_url}{profile_image.lstrip('/')}"
         
-        return templates.TemplateResponse("card.html", {
-            "request": request,
-            "name": card["name"],
-            "title": card["title"],
-            "company": card["company"],
-            "phone": card["phone"],
-            "email": card["email"],
-            "website": card["website"],
-            "linkedin": card["linkedin"],
-            "twitter": card["twitter"],
-            "profile_image": profile_image
-        })
+        # Render template
+        return templates.TemplateResponse(
+            "card.html",
+            {
+                "request": request,
+                **dict(card),  # Unpacks all card fields automatically
+                "profile_image": profile_image
+            }
+        )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error rendering card {card_id}: {str(e)}", exc_info=True)
-        raise HTTPException(500, detail="Internal server error")
-@app.get("/debug/template")
-async def debug_template(request: Request):
-    """Test if templates are loading"""
-    return templates.TemplateResponse("card.html", {
-        "request": request,
-        "name": "Test Name",
-        "title": "Test Title",
-        "company": "Test Co",
-        "phone": "123-456-7890",
-        "email": "test@example.com",
-        "website": "https://example.com",
-        "linkedin": "https://linkedin.com/in/test",
-        "twitter": "https://twitter.com/test",
-        "profile_image": "/static/default.png"
-    })
-
-@app.get("/debug/db")
-async def debug_db():
-    """Test database connection"""
-    with get_db_connection() as conn:
-        cards = conn.execute("SELECT id, name FROM cards LIMIT 5").fetchall()
-    return {"cards": cards}
+        logger.error(f"Card render failed: {str(e)}", exc_info=True)
+        raise HTTPException(500, detail="Card display error")
     
 if __name__ == "__main__":
     import uvicorn
