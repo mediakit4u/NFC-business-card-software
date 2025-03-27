@@ -115,8 +115,8 @@ async def startup_event():
         raise
 
 # Mount static files
-app.mount("/static/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
-app.mount("/static/qr_codes", StaticFiles(directory="/tmp/qr_codes"), name="qr_codes")
+app.mount("/static/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+app.mount("/static/qr_codes", StaticFiles(directory=str(QR_CODES_DIR)), name="qr_codes")
 
 @app.post("/api/cards")
 async def create_card(
