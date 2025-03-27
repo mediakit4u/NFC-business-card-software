@@ -157,6 +157,7 @@ async def create_card(
 
         # Database operation (with context manager)
         with sqlite3.connect(DB_PATH) as conn:
+             cursor = conn.cursor()
             conn.execute(
                 """INSERT INTO cards 
                 (id, name, title, company, phone, email, website, linkedin, twitter, profile_image)
