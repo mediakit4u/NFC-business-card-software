@@ -16,6 +16,7 @@ import tempfile
 
 # Initialize app
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")  # Add this line
 
 # Enhanced logging
 logging.basicConfig(
