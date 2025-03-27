@@ -166,10 +166,12 @@ async def create_card(
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
-
+        
 @app.get("/cards/{card_id}", response_class=HTMLResponse)
 async def get_card(card_id: str, request: Request):
     try:
+        logger.info(f"Attempting to fetch card: {card_id}")
+        
         with get_db_connection() as conn:
             card = conn.execute(
                 "SELECT * FROM cards WHERE id = ?", 
@@ -177,12 +179,14 @@ async def get_card(card_id: str, request: Request):
             ).fetchone()
         
         if not card:
+            logger.error(f"Card not found: {card_id}")
             raise HTTPException(status_code=404, detail="Card not found")
             
         profile_image = card["profile_image"]
         if not profile_image.startswith(("http://", "https://")):
             profile_image = str(request.base_url)[:-1] + profile_image
-            
+            logger.info(f"Processed profile image URL: {profile_image}")
+        
         return templates.TemplateResponse("card.html", {
             "request": request,
             "name": card["name"],
@@ -195,19 +199,10 @@ async def get_card(card_id: str, request: Request):
             "twitter": card["twitter"],
             "profile_image": profile_image
         })
+        
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error rendering card {card_id}: {str(e)}", exc_info=True)
         raise HTTPException(500, detail="Internal server error")
-
-@app.get("/health")
-async def health_check():
-    try:
-        with get_db_connection() as conn:
-            conn.execute("SELECT 1")
-        return {"status": "healthy"}
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        raise HTTPException(500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
