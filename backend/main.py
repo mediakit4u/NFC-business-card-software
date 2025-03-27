@@ -35,9 +35,10 @@ app.add_middleware(
 
 # Configuration
 BASE_DIR = Path(__file__).parent
-UPLOADS_DIR = Path("/tmp/uploads")
-QR_CODES_DIR = Path("/tmp/qr_codes")
-INSTANCE_DIR = Path("/tmp/instance")
+UPLOADS_DIR = Path(tempfile.mkdtemp(prefix="uploads_"))
+QR_CODES_DIR = Path(tempfile.mkdtemp(prefix="qr_"))
+INSTANCE_DIR = Path(tempfile.mkdtemp(prefix="instance_"))
+
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
 
 # Initialize directories with error handling
