@@ -104,7 +104,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/static/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/static/qr_codes", StaticFiles(directory=str(QR_CODES_DIR)), name="qr_codes")
 
-@app.post("/api/cards")
+@app.post("/api/card")
 async def create_card(
     request: Request,
     name: str = Form(...),
@@ -167,7 +167,7 @@ async def create_card(
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(500, detail="Internal server error")
         
-@app.get("/cards/{card_id}", response_class=HTMLResponse)
+@app.get("/card/{card_id}", response_class=HTMLResponse)
 async def get_card(card_id: str, request: Request):
     try:
         # Database fetch
