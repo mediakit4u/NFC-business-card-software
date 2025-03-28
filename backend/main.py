@@ -16,10 +16,18 @@ import tempfile
 
 # Initialize app
 app = FastAPI()
+
+# Configuration - MUST COME FIRST
 BASE_DIR = Path(__file__).parent
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+TEMPLATES_DIR = BASE_DIR / "templates"
+STATIC_DIR = BASE_DIR / "static"
 
+# Ensure directories exist
+os.makedirs(TEMPLATES_DIR, exist_ok=True)
+os.makedirs(STATIC_DIR, exist_ok=True)
 
+# Initialize templates with absolute path
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # Enhanced logging
 logging.basicConfig(
@@ -37,18 +45,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuration
-BASE_DIR = Path(__file__).parent
+# Temporary directories
 UPLOADS_DIR = Path(tempfile.mkdtemp(prefix="uploads_"))
 QR_CODES_DIR = Path(tempfile.mkdtemp(prefix="qr_"))
 INSTANCE_DIR = Path(tempfile.mkdtemp(prefix="instance_"))
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
-# Create directories if they don't exist
-os.makedirs("static", exist_ok=True)  # For default.png
-os.makedirs("templates", exist_ok=True)  # For card.html
-os.makedirs(str(UPLOADS_DIR), exist_ok=True)  # For uploaded profile images
-os.makedirs(str(QR_CODES_DIR), exist_ok=True)  # For generated QR codes
 
+# Create temp directories
+os.makedirs(str(UPLOADS_DIR), exist_ok=True)
+os.makedirs(str(QR_CODES_DIR), exist_ok=True)
 
 # Database connection with retry logic
 def get_db_connection():
@@ -100,10 +105,8 @@ async def startup_event():
     logger.info("Starting application...")
     init_db()
 
-
-# Add this before your mount points to serve default.png
-app.mount("/static", StaticFiles(directory="static"), name="static")
-# Mount static files
+# Mount static files with absolute paths
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/static/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/static/qr_codes", StaticFiles(directory=str(QR_CODES_DIR)), name="qr_codes")
 
@@ -173,6 +176,11 @@ async def create_card(
 @app.get("/cards/{card_id}", response_class=HTMLResponse)
 async def get_card(card_id: str, request: Request):
     try:
+        # Verify template exists
+        template_path = TEMPLATES_DIR / "card.html"
+        if not template_path.exists():
+            raise HTTPException(500, detail=f"Template not found at: {template_path}")
+        
         # Database fetch
         with get_db_connection() as conn:
             card = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
@@ -190,7 +198,7 @@ async def get_card(card_id: str, request: Request):
             "card.html",
             {
                 "request": request,
-                **dict(card),  # Unpacks all card fields automatically
+                **dict(card),
                 "profile_image": profile_image
             }
         )
@@ -200,6 +208,16 @@ async def get_card(card_id: str, request: Request):
     except Exception as e:
         logger.error(f"Card render failed: {str(e)}", exc_info=True)
         raise HTTPException(500, detail="Card display error")
+
+# Debug endpoint
+@app.get("/debug")
+async def debug():
+    return {
+        "template_path": str(TEMPLATES_DIR / "card.html"),
+        "template_exists": (TEMPLATES_DIR / "card.html").exists(),
+        "static_dir": str(STATIC_DIR),
+        "static_exists": (STATIC_DIR / "default.png").exists()
+    }
     
 if __name__ == "__main__":
     import uvicorn
