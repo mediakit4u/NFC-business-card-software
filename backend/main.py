@@ -142,7 +142,7 @@ async def create_card(
             
             with open(profile_path, "wb") as f:
                 f.write(contents)
-            profile_url = f"/static/uploads/{profile_filename}"
+          profile_url = f"static/uploads/{profile_filename}"
 
         with get_db_connection() as conn:
             conn.execute(
@@ -190,9 +190,10 @@ async def get_card(card_id: str, request: Request):
             raise HTTPException(404, detail="Card not found")
             
         # Process image URL
-        profile_image = card["profile_image"]
-        if not profile_image.startswith(("http://", "https://")):
-            profile_image = f"{request.base_url}{profile_image.lstrip('/')}"
+       # Change the image URL handling to:
+          profile_image = card["profile_image"]
+      if not profile_image.startswith(("http://", "https://")):
+          profile_image = f"{request.base_url}{profile_image}"
         
         # Render template
         return templates.TemplateResponse(
