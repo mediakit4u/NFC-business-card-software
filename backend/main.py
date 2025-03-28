@@ -23,25 +23,6 @@ templates_dir = BASE_DIR / "templates"
 templates = Jinja2Templates(directory = templates_dir)
 
 
-# ===== DEBUG ROUTE ===== (Add this!)
-@app.get("/debug-templates")
-async def debug_templates():
-    """Verify if templates are loading correctly."""
-    template_path = templates_dir / "card.html"
-    
-    if not template_path.exists():
-        raise HTTPException(
-            status_code=500,
-            detail=f"Template not found at: {template_path}"
-        )
-    
-    return {
-        "status": "SUCCESS",
-        "template_path": str(template_path),
-        "template_exists": True,
-        "directory_contents": os.listdir(templates_dir)
-    }
-
 # Enhanced logging
 logging.basicConfig(
     level=logging.INFO,
