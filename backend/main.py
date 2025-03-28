@@ -16,8 +16,9 @@ import tempfile
 
 # Initialize app
 app = FastAPI()
-# Get absolute path to templates
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = Path(__file__).parent
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
 
 
 # Enhanced logging
