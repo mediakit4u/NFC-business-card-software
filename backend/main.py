@@ -46,7 +46,8 @@ app.add_middleware(
 )
 
 # Temporary directories
-UPLOADS_DIR = Path(tempfile.mkdtemp(prefix="uploads_"))
+UPLOADS_DIR = BASE_DIR / "uploads"
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 QR_CODES_DIR = Path(tempfile.mkdtemp(prefix="qr_"))
 INSTANCE_DIR = Path(tempfile.mkdtemp(prefix="instance_"))
 DB_PATH = str(INSTANCE_DIR / "business_cards.db")
