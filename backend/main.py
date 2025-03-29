@@ -216,6 +216,18 @@ async def debug():
         "static_exists": (STATIC_DIR / "default.png").exists(),
         "uploads_dir_exists": os.path.exists(UPLOADS_DIR)
     }
+
+# Add this debug endpoint
+@app.get("/debug-upload/{filename}")
+async def debug_upload(filename: str):
+    """Debug endpoint to check file upload status"""
+    filepath = UPLOADS_DIR / filename
+    return {
+        "exists": filepath.exists(),
+        "path": str(filepath),
+        "url": f"/static/uploads/{filename}",
+        "absolute_path": str(filepath.absolute())
+    }
     
 if __name__ == "__main__":
     import uvicorn
