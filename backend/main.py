@@ -182,13 +182,11 @@ async def get_card(card_id: str, request: Request):
         if not card:
             raise HTTPException(404, detail="Card not found")
             
-        # Process image URL - FIXED VERSION
-        profile_image = card["profile_image"]
-        if not profile_image.startswith(("http://", "https://")):
-            # Remove any leading/trailing slashes for consistency
-            base_url = str(request.base_url).rstrip('/')
-            profile_image = profile_image.lstrip('/')
-            profile_image = f"{base_url}/{profile_image}"
+  if not profile_image.startswith(("http://", "https://")):
+    if profile_image.startswith('/static/'):
+        profile_image = f"https://nfc-business-card-software.onrender.com{profile_image}"
+    else:
+        profile_image = f"https://nfc-business-card-software.onrender.com/static/uploads/{os.path.basename(profile_image)}"
 
         return templates.TemplateResponse(
             "card.html",
