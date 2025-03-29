@@ -183,11 +183,12 @@ async def get_card(card_id: str, request: Request):
             raise HTTPException(404, detail="Card not found")
             
         # Process image URL
-     if not profile_image.startswith(("http://", "https://")):
-    if profile_image.startswith("/"):
-        profile_image = f"{request.base_url}{profile_image.lstrip('/')}"
-    else:
-        profile_image = f"{request.base_url}{profile_image}"
+        profile_image = card["profile_image"]  # This line was missing
+        if not profile_image.startswith(("http://", "https://")):
+            if profile_image.startswith("/"):
+                profile_image = f"{request.base_url}{profile_image.lstrip('/')}"
+            else:
+                profile_image = f"{request.base_url}{profile_image}"
         
         # Render template
         return templates.TemplateResponse(
