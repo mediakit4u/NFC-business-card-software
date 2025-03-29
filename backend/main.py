@@ -10,9 +10,7 @@ from pathlib import Path
 import qrcode
 from typing import Optional
 import logging
-import asyncio
 import time
-import tempfile
 
 # Initialize app
 app = FastAPI()
@@ -21,10 +19,16 @@ app = FastAPI()
 BASE_DIR = Path(__file__).parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
+UPLOADS_DIR = BASE_DIR / "uploads"
+QR_CODES_DIR = BASE_DIR / "qr_codes"
+INSTANCE_DIR = BASE_DIR / "instance"
 
 # Ensure directories exist
 os.makedirs(TEMPLATES_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(QR_CODES_DIR, exist_ok=True)
+os.makedirs(INSTANCE_DIR, exist_ok=True)
 
 # Initialize templates with absolute path
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -45,24 +49,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Temporary directories
-UPLOADS_DIR = BASE_DIR / "uploads"
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-QR_CODES_DIR = Path(tempfile.mkdtemp(prefix="qr_"))
-INSTANCE_DIR = Path(tempfile.mkdtemp(prefix="instance_"))
-DB_PATH = str(INSTANCE_DIR / "business_cards.db")
-
-# Create temp directories
-os.makedirs(str(UPLOADS_DIR), exist_ok=True)
-os.makedirs(str(QR_CODES_DIR), exist_ok=True)
-
 # Database connection with retry logic
 def get_db_connection():
     retries = 3
     delay = 1
     for i in range(retries):
         try:
-            conn = sqlite3.connect(DB_PATH, timeout=10)
+            conn = sqlite3.connect(str(INSTANCE_DIR / "business_cards.db"), timeout=10)
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA busy_timeout=5000")
             conn.row_factory = sqlite3.Row
@@ -107,8 +100,8 @@ async def startup_event():
     init_db()
 
 # Mount static files with absolute paths
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static") 
-app.mount("/static/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads") 
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/static/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/static/qr_codes", StaticFiles(directory=str(QR_CODES_DIR)), name="qr_codes")
 
 @app.post("/api/cards")
@@ -137,13 +130,12 @@ async def create_card(
             profile_path = UPLOADS_DIR / profile_filename
             
             contents = await profile_img.read()
-            if len(contents) > 2 * 1024 * 1024:
+            if len(contents) > 2 * 1024 * 1024:  # 2MB limit
                 raise HTTPException(400, detail="Image too large (max 2MB)")
             
             with open(profile_path, "wb") as f:
                 f.write(contents)
-            profile_url = f"static/uploads/{profile_filename}"  # This line must be indented exactly here
-
+            profile_url = f"/static/uploads/{profile_filename}" 
 
         with get_db_connection() as conn:
             conn.execute(
@@ -166,7 +158,7 @@ async def create_card(
             "id": card_id,
             "view_url": f"/cards/{card_id}",
             "qr_url": f"/static/qr_codes/{card_id}.png",
-            "profile_url": profile_url
+            "profile_url": f"{request.base_url}{profile_url}"
         })
 
     except HTTPException:
@@ -191,13 +183,12 @@ async def get_card(card_id: str, request: Request):
             raise HTTPException(404, detail="Card not found")
             
         # Process image URL
-    # Replace the image URL handling with:
-profile_image = card["profile_image"]
-if not profile_image.startswith(("http://", "https://")):
-    if profile_image.startswith("/"):
-        profile_image = f"{request.base_url}{profile_image[1:]}"
-    else:
-        profile_image = f"{request.base_url}{profile_image}"
+        profile_image = card["profile_image"]
+        if not profile_image.startswith(("http://", "https://")):
+            if profile_image.startswith("static/"):
+                profile_image = f"{request.base_url}{profile_image}"
+            else:
+                profile_image = f"{request.base_url}static/uploads/{os.path.basename(profile_image)}"
         
         # Render template
         return templates.TemplateResponse(
@@ -209,20 +200,21 @@ if not profile_image.startswith(("http://", "https://")):
             }
         )
         
-    except HTTPException:
-        raise
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         logger.error(f"Card render failed: {str(e)}", exc_info=True)
         raise HTTPException(500, detail="Card display error")
 
-# Debug endpoint
 @app.get("/debug")
 async def debug():
     return {
         "template_path": str(TEMPLATES_DIR / "card.html"),
         "template_exists": (TEMPLATES_DIR / "card.html").exists(),
         "static_dir": str(STATIC_DIR),
-        "static_exists": (STATIC_DIR / "default.png").exists()
+        "uploads_dir": str(UPLOADS_DIR),
+        "static_exists": (STATIC_DIR / "default.png").exists(),
+        "uploads_dir_exists": os.path.exists(UPLOADS_DIR)
     }
     
 if __name__ == "__main__":
