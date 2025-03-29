@@ -142,7 +142,8 @@ async def create_card(
             
             with open(profile_path, "wb") as f:
                 f.write(contents)
-          profile_url = f"static/uploads/{profile_filename}"
+            profile_url = f"static/uploads/{profile_filename}"  # This line must be indented exactly here
+
 
         with get_db_connection() as conn:
             conn.execute(
